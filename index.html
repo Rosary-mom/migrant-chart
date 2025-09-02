@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrant Population Growth Simulation 1990-2024</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        canvas { max-width: 800px; margin: 20px auto; }
+        #slider-container { margin: 20px; }
+        #impact { font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+    <h1>Interactive Migrant Population Growth: 1990 vs 2024</h1>
+    <p>This visualization shows the increase in foreign-born populations across selected countries. Use the slider to simulate ethical re-migration adjustments (e.g., reducing percentages for population neutrality), and see estimated environmental impacts on traffic and CO2.</p>
+    
+    <canvas id="migrantChart"></canvas>
+    
+    <div id="slider-container">
+        <label for="remigrationSlider">Simulate Re-Migration Reduction (% of 2024 level to reduce): </label>
+        <input type="range" id="remigrationSlider" min="0" max="100" value="0" step="5">
+        <p>Adjusted 2024 Average: <span id="adjustedAvg"></span>%</p>
+        <p>Estimated Environmental Impact: <span id="impact"></span></p>
+    </div>
+    
+    <h2>Ethical Solutions Integration</h2>
+    <p>Combine with these tools for traffic and environmental optimization:</p>
+    <ul>
+        <li><a href="https://rosary-mom.github.io/haikus-for-codespaces/GreenMob.html">GreenMob Re-Migration Game</a>: Ethical self-help (S³-Formula) to achieve population neutrality by 2045, reducing crime and social costs while saving on infrastructure (e.g., 500B euros).</li>
+        <li><a href="https://rosary-mom.github.io/quantum-traffic-js/">Quantum Traffic Simulation</a>: Optimize traffic flow for higher population densities, reducing speed/congestion (e.g., integrate with growth data for CO2 modeling).</li>
+        <li><a href="https://rosary-mom.github.io/rosary/daily_green_exposure_estimator.html">Daily Green Exposure Estimator</a>: Estimate green space access impacts from population growth, promoting sustainable urban planning.</li>
+        <li><a href="https://rosary-mom.github.io/rosary/mobility_impact_calculator.html">Mobility Impact Calculator</a>: Calculate CO2/traffic effects of mobility choices in growing populations.</li>
+        <li><a href="https://rosary-mom.github.io/rosary/green_mobility_visualizer.html">Green Mobility Visualizer</a>: Visualize eco-friendly transport options to offset migrant-driven population increases.</li>
+    </ul>
+    
+    <script>
+        const countries = ['UK', 'US', 'Austria', 'Belgium', 'Denmark', 'Germany', 'Greece', 'Iceland', 'Ireland', 'Finland', 'France', 'Spain', 'Italy', 'Norway', 'Sweden', 'Canada', 'Poland'];
+        const data1990 = [5, 8, 9, 9, 5, 9, 6, 3, 6, 1, 9, 2, 3, 4, 9, 15, 3];
+        const data2024 = [17, 15, 25, 20, 14, 20, 14, 25, 22, 10, 14, 19, 11, 18, 22, 22, 4.5];
+        
+        const ctx = document.getElementById('migrantChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: countries,
+                datasets: [
+                    { label: '1990 (%)', data: data1990, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                    { label: '2024 (%)', data: data2024, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+                ]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, max: 30 } },
+                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}% (Increase: ${data2024[context.dataIndex] - data1990[context.dataIndex]} pp)` } } }
+            }
+        });
+        
+        const slider = document.getElementById('remigrationSlider');
+        const adjustedAvgEl = document.getElementById('adjustedAvg');
+        const impactEl = document.getElementById('impact');
+        
+        function updateSimulation() {
+            const reduction = slider.value / 100;
+            const adjustedData = data2024.map(val => val * (1 - reduction));
+            chart.data.datasets[1].data = adjustedData;
+            chart.update();
+            
+            const avg2024 = data2024.reduce((a, b) => a + b, 0) / data2024.length;
+            const adjustedAvg = avg2024 * (1 - reduction);
+            adjustedAvgEl.textContent = adjustedAvg.toFixed(1);
+            
+            const popReduction = avg2024 - adjustedAvg;
+            const co2Savings = popReduction * 0.5; // Arbitrary: 0.5% CO2 reduction per % pop drop
+            const trafficBenefit = popReduction * 0.3; // Arbitrary: 0.3% traffic flow improvement
+            impactEl.textContent = `CO2 Savings: ~${co2Savings.toFixed(1)}% | Traffic Efficiency Gain: ~${trafficBenefit.toFixed(1)}% (via quantum optimization and green mobility).`;
+        }
+        
+        slider.addEventListener('input', updateSimulation);
+    </script>
+</body>
+</html>
