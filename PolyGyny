@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verfeinerte Gamifizierte Simulation: Re-Migration & Volkshygiene</title>
+    <title>Verfeinerte Gamifizierte Simulation: Re-Migration bis 2050 & Volkshygiene mit Umweltauswirkungen</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
@@ -19,15 +19,16 @@
         .boom { background: blue; }
         .collapse { background: red; }
         .risk { background: orange; }
-        #chart, #pyramidChart { margin: 20px 0; }
+        .green { background: limegreen; }
+        #chart, #pyramidChart, #envChart { margin: 20px 0; }
         .comparison { margin: 20px 0; padding: 10px; background: #e0f7fa; border: 1px solid #00acc1; }
         .level { margin: 10px 0; font-size: 1.2em; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Verfeinerte Gamifizierte Simulation: Re-Migration bis 2050 & Volkshygiene</h1>
-        <p>Integriert Re-Migration (inspiriert von migrant-chart) mit Polygynie, Gesundheit/IQ-Stabilisierung durch Heterosis vs. Degeneration, Subsidien (wie Riester). Erweitert auf USA.</p>
+        <h1>Verfeinerte Gamifizierte Simulation: Re-Migration bis 2050 & Volkshygiene mit Umweltauswirkungen</h1>
+        <p>Integriert Re-Migration (inspiriert von migrant-chart) mit Polygynie, Gesundheit/IQ-Stabilisierung durch Heterosis vs. Degeneration, Subsidien (wie Riester) und Umweltauswirkungen (CO2-Emissionen).</p>
         
         <!-- Sliders -->
         <label>Startpopulation: <span id="startPopVal">100000</span></label>
@@ -69,10 +70,13 @@
         <label>Initialer Ursprungsanteil (%): <span id="originShareVal">70</span></label>
         <input type="range" class="slider" id="originShare" min="50" max="90" value="70" oninput="updateVal('originShareVal', this.value)">
 
+        <label>CO2 per Capita (Tonnen/Jahr): <span id="co2PerCapVal">4.1</span></label>
+        <input type="range" class="slider" id="co2PerCap" min="1" max="20" step="0.1" value="4.1" oninput="updateVal('co2PerCapVal', this.value)">
+
         <label>Land: </label>
-        <select id="country">
-            <option value="DE">Deutschland (83M, 70% Ursprung)</option>
-            <option value="US">USA (340M, 59% Weiß)</option>
+        <select id="country" onchange="updateCo2PerCap()">
+            <option value="DE">Deutschland (83M, 70% Ursprung, CO2 ~4.1)</option>
+            <option value="US">USA (340M, 59% Weiß, CO2 ~14.9)</option>
         </select>
 
         <button onclick="simulate()">Simulieren!</button>
@@ -83,6 +87,7 @@
         <!-- Charts -->
         <canvas id="populationChart" width="800" height="400"></canvas>
         <canvas id="iqHealthChart" width="800" height="400"></canvas>
+        <canvas id="envChart" width="800" height="400"></canvas>
         
         <!-- Score & Level -->
         <div id="score" class="level"></div>
@@ -92,14 +97,24 @@
         
         <!-- Vergleich -->
         <div class="comparison">
-            <h2>Hinweise zu Volkshygiene & Persistenz</h2>
-            <p>Fiktiv: Re-Migration reduziert Inzucht-Risiken, stabilisiert IQ (Heterosis-Boost). Subsidien (wie Riester) machen Modelle persistent. USA: Stärkerer Rückgang weißer Anteil.</p>
+            <h2>Hinweise zu Umweltauswirkungen & Volkshygiene</h2>
+            <p>Fiktiv: Re-Migration reduziert Inzucht-Risiken, stabilisiert IQ (Heterosis-Boost). Subsidien (wie Riester) machen Modelle persistent. Umweltauswirkungen: Pop-Wachstum erhöht CO2, Re-Migration senkt es.</p>
         </div>
     </div>
 
     <script>
-        let myChart, iqHealthChart;
+        let myChart, iqHealthChart, envChart;
         function updateVal(id, val) { document.getElementById(id).innerText = val; }
+        function updateCo2PerCap() {
+            const country = document.getElementById('country').value;
+            const co2Slider = document.getElementById('co2PerCap');
+            if (country === 'US') {
+                co2Slider.value = 14.9;
+            } else {
+                co2Slider.value = 4.1;
+            }
+            updateVal('co2PerCapVal', co2Slider.value);
+        }
 
         function simulate() {
             let startPop = parseInt(document.getElementById('startPop').value);
@@ -117,6 +132,7 @@
             const subsidy = parseFloat(document.getElementById('subsidy').value);
             const polyandry = parseInt(document.getElementById('polyandry').value);
             const originShare = parseFloat(document.getElementById('originShare').value) / 100;
+            const co2PerCap = parseFloat(document.getElementById('co2PerCap').value);
             const polyFactor = polyandry ? 1.1 : 1.2;
             const stabilityFactor = 1.3 * aiFert * subsidy * heterosis * (1 + inzuchtRed);
 
@@ -125,6 +141,7 @@
                 let iq = [100]; // Start IQ
                 let health = [80]; // Start Gesundheit %
                 let origin = [Math.round(start * originShare)];
+                let co2 = [start * co2PerCap / 1000000]; // Mt CO2 initial
                 for (let g = 1; g <= gens; g++) {
                     let baseGrowth = pop[g-1] * (fert / 2) * reMig; // Re-Mig reduziert
                     let adoptAdd = baseGrowth * adopt;
@@ -134,8 +151,11 @@
                     iq.push(iq[g-1] + (heterosis - 1) * 1 - (1 - inzuchtRed) * 0.5);
                     health.push(health[g-1] + inzuchtRed * 2);
                     origin.push(Math.round(origin[g-1] * (fert / 2) * extra * 0.99));
+                    // CO2: Pop * perCap * Effizienz (Heterosis + Re-Mig reduziert)
+                    let envEff = (1 - inzuchtRed) * heterosis * reMig;
+                    co2.push((newPop * co2PerCap / 1000000) * envEff);
                 }
-                return {pop, iq, health, origin};
+                return {pop, iq, health, origin, co2};
             }
 
             const mono = growth(startPop, fertMono, adoptBase);
@@ -143,15 +163,17 @@
             const polyPrimo = growth(startPop, fertPoly, adoptHigh, stabilityFactor / polyFactor);
 
             // Tabelle bauen
-            let table = '<tr><th>Gen</th><th>Mono Pop</th><th>Mono IQ</th><th>Mono Health %</th><th>Poly Std Pop</th><th>Poly Std IQ</th><th>Poly Std Health %</th><th>Poly Primo Pop</th><th>Poly Primo IQ</th><th>Poly Primo Health %</th><th>Score</th></tr>';
+            let table = '<tr><th>Gen</th><th>Mono Pop</th><th>Mono IQ</th><th>Mono Health %</th><th>Mono CO2 (Mt)</th><th>Poly Std Pop</th><th>Poly Std IQ</th><th>Poly Std Health %</th><th>Poly Std CO2 (Mt)</th><th>Poly Primo Pop</th><th>Poly Primo IQ</th><th>Poly Primo Health %</th><th>Poly Primo CO2 (Mt)</th><th>Score</th></tr>';
             for (let g = 0; g <= gens; g++) {
                 let score = 'Stabil';
                 let badgeClass = 'stable';
                 let growthRate = (polyPrimo.pop[g] / startPop) * 100;
+                let co2Rate = polyPrimo.co2[g];
                 if (growthRate > 200) { score = 'Boom - Volkshygiene-Optimiert!'; badgeClass = 'boom'; }
                 if (growthRate < 100) { score = 'Kollaps'; badgeClass = 'collapse'; }
                 if (polyPrimo.iq[g] < 100) { score += ' (Degenerationsrisiko)'; badgeClass = 'risk'; }
-                table += `<tr><td>${g}</td><td>${mono.pop[g]}</td><td>${mono.iq[g]}</td><td>${mono.health[g]}</td><td>${polyStd.pop[g]}</td><td>${polyStd.iq[g]}</td><td>${polyStd.health[g]}</td><td>${polyPrimo.pop[g]}</td><td>${polyPrimo.iq[g]}</td><td>${polyPrimo.health[g]}</td><td><span class="badge ${badgeClass}">${score}</span></td></tr>`;
+                if (co2Rate < polyStd.co2[g]) { score += ' (Grüner Boom)'; badgeClass = 'green'; }
+                table += `<tr><td>${g}</td><td>${mono.pop[g]}</td><td>${mono.iq[g]}</td><td>${mono.health[g]}</td><td>${mono.co2[g].toFixed(2)}</td><td>${polyStd.pop[g]}</td><td>${polyStd.iq[g]}</td><td>${polyStd.health[g]}</td><td>${polyStd.co2[g].toFixed(2)}</td><td>${polyPrimo.pop[g]}</td><td>${polyPrimo.iq[g]}</td><td>${polyPrimo.health[g]}</td><td>${polyPrimo.co2[g].toFixed(2)}</td><td><span class="badge ${badgeClass}">${score}</span></td></tr>`;
             }
             document.getElementById('resultTable').innerHTML = table;
 
@@ -186,8 +208,23 @@
                 options: { scales: { y: { beginAtZero: true } } }
             });
 
+            // Umwelt Chart (CO2)
+            const envCtx = document.getElementById('envChart').getContext('2d');
+            if (envChart) envChart.destroy();
+            envChart = new Chart(envCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: gens+1}, (_, i) => i),
+                    datasets: [
+                        { label: 'Mono CO2 (Mt)', data: mono.co2, borderColor: 'brown' },
+                        { label: 'Poly Primo CO2 (Mt)', data: polyPrimo.co2, borderColor: 'green' }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
             // Score & Level
-            const level = reMig < 0.8 && polyPrimo.iq[gens] > 105 ? 'Volkshygiene-Meister: Persistent & Positiv!' : 'Basis Level';
+            const level = reMig < 0.8 && polyPrimo.iq[gens] > 105 && polyPrimo.co2[gens] < polyStd.co2[gens] ? 'Volkshygiene-Meister: Persistent, Positiv & Grün!' : 'Basis Level';
             document.getElementById('score').innerHTML = `<h3>${level} - Gesamtscore: ${polyPrimo.pop[gens] > startPop * 2 ? 'Boom!' : 'Stabil'}</h3>`;
         }
 
