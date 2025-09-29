@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verfeinerte Polygynie/Polyandrie Bevölkerungssimulation - Gamifiziert</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { max-width: 1200px; margin: auto; }
+        .slider { width: 100%; margin: 10px 0; }
+        .output { font-weight: bold; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #f2f2f2; }
+        .badge { padding: 5px 10px; border-radius: 5px; color: white; }
+        .stable { background: green; }
+        .boom { background: blue; }
+        .collapse { background: red; }
+        .risk { background: orange; }
+        #chart, #pyramidChart { margin: 20px 0; }
+        .comparison { margin: 20px 0; padding: 10px; background: #e0f7fa; border: 1px solid #00acc1; }
+        .level { margin: 10px 0; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verfeinerte Gamifizierte Bevölkerungssimulation</h1>
+        <p>Erweitert um Heterosis, Ursprungsanteil, Pyramide, Länder und Rinder-Kreuzung. Passe Sliders an!</p>
+        
+        <!-- Sliders -->
+        <label>Startpopulation: <span id="startPopVal">100000</span></label>
+        <input type="range" class="slider" id="startPop" min="10000" max="1000000" value="100000" oninput="updateVal('startPopVal', this.value)">
+
+        <label>Fertilität Monogamie: <span id="fertMonoVal">1.5</span></label>
+        <input type="range" class="slider" id="fertMono" min="1.0" max="3.0" step="0.1" value="1.5" oninput="updateVal('fertMonoVal', this.value)">
+
+        <label>Fertilität Poly: <span id="fertPolyVal">2.5</span></label>
+        <input type="range" class="slider" id="fertPoly" min="1.0" max="4.0" step="0.1" value="2.5" oninput="updateVal('fertPolyVal', this.value)">
+
+        <label>Adoption Basis (%): <span id="adoptBaseVal">5</span></label>
+        <input type="range" class="slider" id="adoptBase" min="0" max="20" value="5" oninput="updateVal('adoptBaseVal', this.value)">
+
+        <label>Adoption Hoch (%): <span id="adoptHighVal">10</span></label>
+        <input type="range" class="slider" id="adoptHigh" min="0" max="20" value="10" oninput="updateVal('adoptHighVal', this.value)">
+
+        <label>Generationen: <span id="gensVal">10</span></label>
+        <input type="range" class="slider" id="gens" min="1" max="20" value="10" oninput="updateVal('gensVal', this.value)">
+
+        <label>Künstliche Befruchtung Boost: <span id="aiFertVal">1.5</span></label>
+        <input type="range" class="slider" id="aiFert" min="1.0" max="2.0" step="0.1" value="1.5" oninput="updateVal('aiFertVal', this.value)">
+
+        <label>Förderungen/Remigration Boost: <span id="fundBoostVal">1.2</span></label>
+        <input type="range" class="slider" id="fundBoost" min="1.0" max="1.5" step="0.1" value="1.2" oninput="updateVal('fundBoostVal', this.value)">
+
+        <label>Polyandrie-Modus (0=Polygynie, 1=Polyandrie): <span id="polyandryVal">0</span></label>
+        <input type="range" class="slider" id="polyandry" min="0" max="1" step="1" value="0" oninput="updateVal('polyandryVal', this.value)">
+
+        <!-- Neue Sliders -->
+        <label>Heterosis-Boost (Vielfalt): <span id="heterosisVal">1.2</span></label>
+        <input type="range" class="slider" id="heterosis" min="1.0" max="1.5" step="0.1" value="1.2" oninput="updateVal('heterosisVal', this.value)">
+
+        <label>Initialer Ursprungsanteil (%): <span id="originShareVal">70</span></label>
+        <input type="range" class="slider" id="originShare" min="50" max="90" value="70" oninput="updateVal('originShareVal', this.value)">
+
+        <label>Kreuzungsgeneration (F1-F10): <span id="crossGenVal">3</span></label>
+        <input type="range" class="slider" id="crossGen" min="1" max="10" value="3" oninput="updateVal('crossGenVal', this.value)">
+
+        <label>Land: </label>
+        <select id="country">
+            <option value="DE">Deutschland (83M, 70% Ursprung)</option>
+            <option value="SE">Schweden (10.5M, 80% Ursprung)</option>
+            <option value="EU">EU-Durchschnitt (448M, 85% Ursprung)</option>
+        </select>
+
+        <button onclick="simulate()">Simulieren!</button>
+        
+        <!-- Tabelle -->
+        <table id="resultTable"></table>
+        
+        <!-- Charts -->
+        <canvas id="populationChart" width="800" height="400"></canvas>
+        <canvas id="pyramidChart" width="800" height="400"></canvas>
+        
+        <!-- Score & Level -->
+        <div id="score" class="level"></div>
+        
+        <!-- Download -->
+        <button onclick="downloadCSV()">Tabelle als CSV downloaden</button>
+        
+        <!-- Vergleich -->
+        <div class="comparison">
+            <h2>Vergleich mit schwedischen Poly-Modellen & UN</h2>
+            <p>Schweden: Polygamie illegal, Polyamorie toleriert (5-10%). Geburtenrate 1.7. UN-Charta: Kein Schutz für 'weiße Rasse'; Gleichheit ohne Rassendiskriminierung. Rinder-Kreuzung: Heterosis hoch in F1 (Charolais/Angus/Holstein), sinkt in F2/F3.</p>
+        </div>
+    </div>
+
+    <script>
+        let myChart, pyramidChart;
+        function updateVal(id, val) { document.getElementById(id).innerText = val; }
+
+        function simulate() {
+            let startPop = parseInt(document.getElementById('startPop').value);
+            const country = document.getElementById('country').value;
+            if (country === 'SE') startPop = 10500000;
+            if (country === 'EU') startPop = 448000000;
+            const fertMono = parseFloat(document.getElementById('fertMono').value);
+            const fertPoly = parseFloat(document.getElementById('fertPoly').value);
+            const adoptBase = parseFloat(document.getElementById('adoptBase').value) / 100;
+            const adoptHigh = parseFloat(document.getElementById('adoptHigh').value) / 100;
+            const gens = parseInt(document.getElementById('gens').value);
+            const aiFert = parseFloat(document.getElementById('aiFert').value);
+            const fundBoost = parseFloat(document.getElementById('fundBoost').value);
+            const polyandry = parseInt(document.getElementById('polyandry').value);
+            const heterosis = parseFloat(document.getElementById('heterosis').value);
+            const originShare = parseFloat(document.getElementById('originShare').value) / 100;
+            const crossGen = parseInt(document.getElementById('crossGen').value);
+            const polyFactor = polyandry ? 1.1 : 1.2;
+            let heterosisDecay = 1.2 - (crossGen * 0.05); // Abnehmend F1 hoch, F10 niedrig
+            const stabilityFactor = 1.3 * aiFert * fundBoost * heterosis * heterosisDecay;
+
+            function growth(start, fert, adopt, extra = 1) {
+                let pop = [start];
+                let origin = [Math.round(start * originShare)];
+                let pyramid = [{youth: 0.15, work: 0.65, old: 0.2}]; // Initial Pyramide
+                for (let g = 1; g <= gens; g++) {
+                    let baseGrowth = pop[g-1] * (fert / 2);
+                    let adoptAdd = baseGrowth * adopt;
+                    let newPop = Math.round((baseGrowth + adoptAdd) * extra);
+                    pop.push(newPop);
+                    // Ursprungsanteil sinkt bei Migration (hyp: -1%/Gen)
+                    origin.push(Math.round(origin[g-1] * (fert / 2) * extra * 0.99));
+                    // Pyramide altert: +1% Alt, -1% Jugend pro Gen bei niedriger Fert
+                    let ageShift = fert < 2 ? 0.01 : -0.01;
+                    pyramid.push({
+                        youth: pyramid[g-1].youth - ageShift,
+                        work: pyramid[g-1].work,
+                        old: pyramid[g-1].old + ageShift
+                    });
+                }
+                return {pop, origin, pyramid};
+            }
+
+            const mono = growth(startPop, fertMono, adoptBase);
+            const polyStd = growth(startPop, fertPoly, adoptBase, 1 / polyFactor);
+            const polyPrimo = growth(startPop, fertPoly, adoptHigh, stabilityFactor / polyFactor);
+
+            // Tabelle bauen
+            let table = '<tr><th>Gen</th><th>Mono Pop</th><th>Mono Ursprung % (abs)</th><th>Poly Std Pop</th><th>Poly Std Ursprung % (abs)</th><th>Poly Primo Pop</th><th>Poly Primo Ursprung % (abs)</th><th>Score</th></tr>';
+            for (let g = 0; g <= gens; g++) {
+                let monoOriginPct = Math.round((mono.origin[g] / mono.pop[g]) * 100) || 0;
+                let stdOriginPct = Math.round((polyStd.origin[g] / polyStd.pop[g]) * 100) || 0;
+                let primoOriginPct = Math.round((polyPrimo.origin[g] / polyPrimo.pop[g]) * 100) || 0;
+                let score = 'Stabil';
+                let badgeClass = 'stable';
+                let growthRate = (polyPrimo.pop[g] / startPop) * 100;
+                if (growthRate > 200) { score = 'Boom - Vielfalt-Optimiert!'; badgeClass = 'boom'; }
+                if (growthRate < 100) { score = 'Kollaps'; badgeClass = 'collapse'; }
+                if (heterosis < 1.2) { score += ' (Vielfaltsrisiko)'; badgeClass = 'risk'; }
+                table += `<tr><td>${g}</td><td>${mono.pop[g]}</td><td>${monoOriginPct} (${mono.origin[g]})</td><td>${polyStd.pop[g]}</td><td>${stdOriginPct} (${polyStd.origin[g]})</td><td>${polyPrimo.pop[g]}</td><td>${primoOriginPct} (${polyPrimo.origin[g]})</td><td><span class="badge ${badgeClass}">${score}</span></td></tr>`;
+            }
+            document.getElementById('resultTable').innerHTML = table;
+
+            // Population Chart
+            const ctx = document.getElementById('populationChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: gens+1}, (_, i) => i),
+                    datasets: [
+                        { label: 'Monogamie', data: mono.pop, borderColor: 'green' },
+                        { label: 'Poly Std', data: polyStd.pop, borderColor: 'blue' },
+                        { label: 'Poly Primo & Heterosis', data: polyPrimo.pop, borderColor: 'red' }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            // Pyramiden Chart (für letzte Gen)
+            const pyramidCtx = document.getElementById('pyramidChart').getContext('2d');
+            if (pyramidChart) pyramidChart.destroy();
+            pyramidChart = new Chart(pyramidCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jugend', 'Arbeit', 'Alt'],
+                    datasets: [
+                        { label: 'Mono Pyramide (letzte Gen)', data: [mono.pyramid[gens].youth, mono.pyramid[gens].work, mono.pyramid[gens].old], backgroundColor: 'green' },
+                        { label: 'Poly Primo Pyramide (letzte Gen)', data: [polyPrimo.pyramid[gens].youth, polyPrimo.pyramid[gens].work, polyPrimo.pyramid[gens].old], backgroundColor: 'red' }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true, max: 1 } } }
+            });
+
+            // Score & Level
+            const level = heterosis > 1.2 && crossGen > 1 ? 'Expert Level: Kreuzung & Vielfalt aktiviert!' : 'Basis Level';
+            document.getElementById('score').innerHTML = `<h3>${level} - Gesamtscore: ${polyPrimo.pop[gens] > startPop * 2 ? 'Boom!' : 'Stabil'}</h3>`;
+        }
+
+        function downloadCSV() {
+            const rows = Array.from(document.querySelectorAll('#resultTable tr'));
+            let csv = rows.map(row => Array.from(row.cells).map(cell => cell.innerText).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'simulation.csv';
+            a.click();
+        }
+    </script>
+</body>
+</html>
