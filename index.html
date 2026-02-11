@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,37 +8,53 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
         canvas { max-width: 900px; margin: 20px auto; display: block; }
-        #slider-container, #crime-section { margin: 30px auto; max-width: 900px; }
-        #impact { font-weight: bold; color: #d32f2f; }
-        h2 { text-align: center; }
+        #slider-container, #crime-section, #pie-section { margin: 30px auto; max-width: 1100px; }
+        .pies { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 30px; }
+        .pie-container { width: 300px; text-align: center; }
+        #impact { font-weight: bold; color: #c62828; }
     </style>
 </head>
 <body>
-    <h1>Interactive Migrant Population Growth: 1990 vs 2024</h1>
-    <p>Original visualization + new Germany crime impact simulation based on official BKA PKS data (completed cases).</p>
-    
+    <h1>Interactive Migrant Population Growth + BKA Crime Impact</h1>
+    <p>Original + neue Deutschland-Kriminalitäts-Simulation auf Basis offizieller BKA-PKS-Daten (vollendete Fälle).</p>
+
     <canvas id="migrantChart"></canvas>
-    
+
     <div id="slider-container">
         <label for="remigrationSlider">Simulate Re-Migration Reduction (% of 2024 level to reduce): </label>
         <input type="range" id="remigrationSlider" min="0" max="100" value="0" step="5">
         <p>Adjusted 2024 Average foreign-born: <span id="adjustedAvg"></span>%</p>
-        <p>Estimated Impact: <span id="impact"></span></p>
+        <p id="impact"></p>
     </div>
 
     <div id="crime-section">
-        <h2>Germany: Migrant Share in Violent Crime (BKA PKS 2014 / 2018 / 2023)</h2>
-        <p>Non-German suspect shares used: Murder 25/38/41 %, Sexual offences 20/35/34 %, Assault 22/28/29 % (sources: PKS tables + Bundeslagebild Zuwanderung).</p>
+        <h2>Germany: Migrant Share in Violent Crime (BKA 2014 / 2018 / 2023)</h2>
         <canvas id="crimeChart"></canvas>
     </div>
 
-    <!-- Rest of your ethical links unchanged -->
+    <!-- NEU: Interaktive Tortendiagramme genau im Ethical-Section-Bereich -->
+    <div id="pie-section">
+        <h2>Tortendiagramme: Verteilung migrant-verursachter Straftaten pro Jahr</h2>
+        <div class="pies">
+            <div class="pie-container"><canvas id="pie2014"></canvas><p><strong>2014</strong></p></div>
+            <div class="pie-container"><canvas id="pie2018"></canvas><p><strong>2018</strong></p></div>
+            <div class="pie-container"><canvas id="pie2023"></canvas><p><strong>2023</strong></p></div>
+        </div>
+        <p style="text-align:center; margin-top:10px;">Bewege den Slider → absolute Fallzahlen in den Tooltips sinken sofort (Re-Migration-Effekt).</p>
+    </div>
+
     <h2>Ethical Solutions Integration</h2>
-    <p>Combine with these tools...</p>
-    <ul> ... (deine Links bleiben gleich) </ul>
+    <p>Combine with these tools for traffic, environment and ethical re-migration:</p>
+    <ul>
+        <li><a href="https://rosary-mom.github.io/haikus-for-codespaces/GreenMob.html">GreenMob Re-Migration Game</a></li>
+        <li><a href="https://rosary-mom.github.io/quantum-traffic-js/">Quantum Traffic Simulation</a></li>
+        <li><a href="https://rosary-mom.github.io/rosary/daily_green_exposure_estimator.html">Daily Green Exposure Estimator</a></li>
+        <li><a href="https://rosary-mom.github.io/rosary/mobility_impact_calculator.html">Mobility Impact Calculator</a></li>
+        <li><a href="https://rosary-mom.github.io/rosary/green_mobility_visualizer.html">Green Mobility Visualizer</a></li>
+    </ul>
 
     <script>
-        // === Original migrant population chart ===
+        // === Original migrant chart (unverändert) ===
         const countries = ['UK', 'US', 'Austria', 'Belgium', 'Denmark', 'Germany', 'Greece', 'Iceland', 'Ireland', 'Finland', 'France', 'Spain', 'Italy', 'Norway', 'Sweden', 'Canada', 'Poland'];
         const data1990 = [5, 8, 9, 9, 5, 9, 6, 3, 6, 1, 9, 2, 3, 4, 9, 15, 3];
         const data2024 = [17, 15, 25, 20, 14, 20, 14, 25, 22, 10, 14, 19, 11, 18, 22, 22, 4.5];
@@ -46,35 +62,20 @@
         const ctx = document.getElementById('migrantChart').getContext('2d');
         const migrantChart = new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: countries,
-                datasets: [
-                    { label: '1990 (%)', data: data1990, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
-                    { label: '2024 (%)', data: data2024, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
-                ]
-            },
-            options: {
-                scales: { y: { beginAtZero: true, max: 30 } },
-                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}%` } } }
-            }
+            data: { labels: countries, datasets: [
+                { label: '1990 (%)', data: data1990, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                { label: '2024 (%)', data: data2024, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+            ]},
+            options: { scales: { y: { beginAtZero: true, max: 30 } }}
         });
 
-        // === BKA Crime Data for Germany (completed cases from your screenshot) ===
+        // === BKA Crime Data ===
         const bkaData = {
             years: [2014, 2018, 2023],
-            totalCases: {
-                murder: [122, 430, 1131],
-                sexual: [949, 6046, 44754],
-                assault: [18512, 74177, 1282529]
-            },
-            nonGermanShare: {          // realistic shares from PKS + Bundeslagebild Zuwanderung
-                murder: [0.25, 0.38, 0.41],
-                sexual: [0.20, 0.35, 0.34],
-                assault: [0.22, 0.28, 0.29]
-            }
+            totalCases: { murder: [122, 430, 1131], sexual: [949, 6046, 44754], assault: [18512, 74177, 1282529] },
+            nonGermanShare: { murder: [0.25, 0.38, 0.41], sexual: [0.20, 0.35, 0.34], assault: [0.22, 0.28, 0.29] }
         };
 
-        // Calculate initial migrant-caused cases
         let migrantCases = {};
         function calculateMigrantCases(reduction = 0) {
             migrantCases = {};
@@ -87,27 +88,63 @@
                 };
             });
         }
-        calculateMigrantCases(); // initial
+        calculateMigrantCases();
 
-        // Crime chart (grouped bars: migrant-caused cases per category)
+        // Crime bar chart
         const crimeCtx = document.getElementById('crimeChart').getContext('2d');
         const crimeChart = new Chart(crimeCtx, {
             type: 'bar',
-            data: {
-                labels: bkaData.years,
-                datasets: [
-                    { label: 'Mord/Totschlag (migrant-caused)', data: bkaData.years.map(y => migrantCases[y].murder), backgroundColor: '#d32f2f' },
-                    { label: 'Sexuelle Übergriffe (migrant-caused)', data: bkaData.years.map(y => migrantCases[y].sexual), backgroundColor: '#1976d2' },
-                    { label: 'Körperverletzung (migrant-caused)', data: bkaData.years.map(y => migrantCases[y].assault), backgroundColor: '#388e3c' }
-                ]
-            },
-            options: {
-                scales: { y: { beginAtZero: true } },
-                plugins: { title: { display: true, text: 'Estimated cases caused by non-Germans' } }
-            }
+            data: { labels: bkaData.years, datasets: [
+                { label: 'Mord/Totschlag', data: bkaData.years.map(y => migrantCases[y].murder), backgroundColor: '#d32f2f' },
+                { label: 'Sexuelle Übergriffe', data: bkaData.years.map(y => migrantCases[y].sexual), backgroundColor: '#1976d2' },
+                { label: 'Körperverletzung', data: bkaData.years.map(y => migrantCases[y].assault), backgroundColor: '#388e3c' }
+            ]},
+            options: { scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Migrant-caused cases' }}}
         });
 
-        // === Slider logic (now affects BOTH charts + crime impact) ===
+        // === Neue interaktive Tortendiagramme ===
+        let pie2014, pie2018, pie2023;
+
+        function createOrUpdatePie(canvasId, yearData, yearLabel, pieVar) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const total = yearData.reduce((a, b) => a + b, 0);
+            const data = {
+                labels: ['Mord/Totschlag', 'Sexuelle Übergriffe', 'Körperverletzung'],
+                datasets: [{
+                    data: yearData,
+                    backgroundColor: ['#d32f2f', '#1976d2', '#388e3c']
+                }]
+            };
+
+            if (!pieVar) {
+                return new Chart(ctx, {
+                    type: 'pie',
+                    data: data,
+                    options: {
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.label}: ${ctx.raw} Fälle (${(ctx.raw / total * 100).toFixed(1)}%)`
+                                }
+                            },
+                            title: { display: true, text: yearLabel }
+                        }
+                    }
+                });
+            } else {
+                pieVar.data.datasets[0].data = yearData;
+                pieVar.update();
+                return pieVar;
+            }
+        }
+
+        function updatePieCharts() {
+            pie2014 = createOrUpdatePie('pie2014', [migrantCases[2014].murder, migrantCases[2014].sexual, migrantCases[2014].assault], '2014', pie2014);
+            pie2018 = createOrUpdatePie('pie2018', [migrantCases[2018].murder, migrantCases[2018].sexual, migrantCases[2018].assault], '2018', pie2018);
+            pie2023 = createOrUpdatePie('pie2023', [migrantCases[2023].murder, migrantCases[2023].sexual, migrantCases[2023].assault], '2023', pie2023);
+        }
+
+        // === Slider + alles aktualisieren ===
         const slider = document.getElementById('remigrationSlider');
         const adjustedAvgEl = document.getElementById('adjustedAvg');
         const impactEl = document.getElementById('impact');
@@ -121,33 +158,33 @@
             migrantChart.update();
 
             const avg2024 = data2024.reduce((a, b) => a + b, 0) / data2024.length;
-            const adjustedAvg = avg2024 * (1 - reduction);
-            adjustedAvgEl.textContent = adjustedAvg.toFixed(1);
+            adjustedAvgEl.textContent = (avg2024 * (1 - reduction)).toFixed(1);
 
-            // Crime chart
+            // Crime
             calculateMigrantCases(reduction);
             crimeChart.data.datasets[0].data = bkaData.years.map(y => migrantCases[y].murder);
             crimeChart.data.datasets[1].data = bkaData.years.map(y => migrantCases[y].sexual);
             crimeChart.data.datasets[2].data = bkaData.years.map(y => migrantCases[y].assault);
             crimeChart.update();
 
-            // Impact text
-            const popReduction = avg2024 - adjustedAvg;
-            const co2Savings = popReduction * 0.5;
-            const trafficBenefit = popReduction * 0.3;
-            const totalCrimeReduction = Object.keys(migrantCases).reduce((sum, y) => {
-                return sum + migrantCases[y].murder + migrantCases[y].sexual + migrantCases[y].assault;
-            }, 0);
-            const originalTotalCrime = bkaData.totalCases.murder.reduce((a,b)=>a+b,0) +
-                                      bkaData.totalCases.sexual.reduce((a,b)=>a+b,0) +
-                                      bkaData.totalCases.assault.reduce((a,b)=>a+b,0);
-            const crimePercentReduction = ((originalTotalCrime - totalCrimeReduction) / originalTotalCrime * 100).toFixed(0);
+            // Pies
+            updatePieCharts();
 
-            impactEl.textContent = `CO₂ Savings: ~${co2Savings.toFixed(1)}% | Traffic Gain: ~${trafficBenefit.toFixed(1)}% | Crime cases reduced: ~${crimePercentReduction}% (${Math.round(originalTotalCrime - totalCrimeReduction)} fewer violent cases)`;
+            // Impact
+            const popReduction = avg2024 - (avg2024 * (1 - reduction));
+            const totalCrimeNow = Object.values(migrantCases).reduce((sum, y) => sum + y.murder + y.sexual + y.assault, 0);
+            const originalTotal = bkaData.totalCases.murder.reduce((a,b)=>a+b) + bkaData.totalCases.sexual.reduce((a,b)=>a+b) + bkaData.totalCases.assault.reduce((a,b)=>a+b);
+            const crimeReductionPercent = ((originalTotal - totalCrimeNow) / originalTotal * 100).toFixed(0);
+
+            impactEl.innerHTML = `
+                CO₂ Savings: ~${(popReduction * 0.5).toFixed(1)}% | 
+                Traffic Gain: ~${(popReduction * 0.3).toFixed(1)}% | 
+                <strong>Crime reduced: ~${crimeReductionPercent}% (${Math.round(originalTotal - totalCrimeNow)} fewer violent cases)</strong>
+            `;
         }
 
         slider.addEventListener('input', updateSimulation);
-        updateSimulation(); // initial call
+        updateSimulation(); // Initial
     </script>
 </body>
 </html>
